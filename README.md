@@ -33,6 +33,15 @@ Both functions read `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`, and the rel
 deployment name from server-side environment/application settings. This is what makes it
 safe to deploy this app publicly.
 
+**These functions run as a standalone Azure Function App**, not as Static Web Apps'
+built-in "managed functions." We hit a known platform inconsistency with managed
+functions (a clean, successful deploy log, followed by every `/api/*` route 404ing at
+runtime — see [Azure/static-web-apps#1681](https://github.com/Azure/static-web-apps/issues/1681)),
+so this app uses the "Bring your own Functions" pattern instead: a separate Function App
+resource, deployed by its own GitHub Actions workflow, linked to the Static Web App so it's
+still reachable at the same `/api/*` paths from the frontend. See "Deploying the API"
+below for the one-time setup.
+
 ## Authentication
 
 The whole app — every page and every `/api/*` call — requires signing in with a
@@ -124,33 +133,67 @@ get committed.
 3. From the resource's **Keys and Endpoint** page, copy the endpoint URL and a key —
    these become `AZURE_OPENAI_ENDPOINT` and `AZURE_OPENAI_API_KEY`.
 
-## Deploying to Azure (Static Web Apps)
+## Deploying the API (standalone Azure Function App)
 
-This repo is set up for **Azure Static Web Apps**, which hosts the built frontend and
-the `api/` Azure Functions together, with free HTTPS, built-in authentication, and
-CI/CD from GitHub.
+This is a one-time setup per environment. Do this **before** relying on the frontend
+deploy, since the frontend's `/api/*` calls won't work until it's linked.
+
+1. **Create a Function App resource** in the Azure Portal: Create a resource → search
+   "Function App" → Create.
+   - Hosting: **Consumption** plan is fine for this workload.
+   - Runtime stack: **Node.js**, version 20 or 22 (match `NODE_VERSION` in
+     `.github/workflows/deploy-functions.yml`).
+   - OS: Linux.
+   - Region: any region — this path isn't restricted to the small region list that
+     Static Web Apps' managed Functions require.
+   - Note the **Function App name** you choose.
+2. **Set the Azure OpenAI values on this Function App** (not on the Static Web App):
+   resource → **Environment variables** (or **Configuration** → Application settings,
+   depending on portal version) → add:
+   - `AZURE_OPENAI_ENDPOINT`
+   - `AZURE_OPENAI_API_KEY`
+   - `AZURE_OPENAI_CHAT_DEPLOYMENT`
+   - `AZURE_OPENAI_EMBEDDING_DEPLOYMENT`
+3. **Get a publish profile**: Function App resource → **Overview** → **Get publish
+   profile** (downloads an XML file). Copy its entire contents.
+4. **Add it as a GitHub secret**: repo → Settings → Secrets and variables → Actions →
+   New repository secret → name it `AZURE_FUNCTIONAPP_PUBLISH_PROFILE`, paste the XML.
+5. **Set the Function App name in the workflow**: edit
+   `.github/workflows/deploy-functions.yml`, change
+   `AZURE_FUNCTIONAPP_NAME: your-function-app-name` to the name from step 1.
+6. **Push to `main`** (or run the workflow manually from the Actions tab) — this deploys
+   `chat` and `embeddings` to the standalone Function App. Confirm both show up under
+   the Function App resource's **Functions** blade before moving on.
+7. **Link it to the Static Web App**: open your Static Web App resource → **Settings** →
+   **APIs** → on the Production row, select **Link** → choose the Function App you just
+   created → **Link**. This makes it reachable at the same `/api/*` paths the frontend
+   already calls — no frontend code changes needed.
+
+Once linked, this Function App is the one serving `/api/chat` and `/api/embeddings` —
+Static Web Apps' own managed-Functions feature is no longer used at all.
+
+## Deploying the frontend (Static Web Apps)
+
+If you already have the Static Web App resource from earlier setup, you don't need to
+recreate it — just make sure its workflow's `api_location` is set to `""` (already done
+in `.github/workflows/azure-static-web-apps.yml`) and that step 7 above has been done.
+
+For a fresh setup:
 
 1. **Push this project to a GitHub repo.**
 2. In the Azure Portal, create a **Static Web App** resource:
    - Deployment source: GitHub → pick your repo/branch
    - Build presets: **Custom**
    - App location: `/`
-   - Api location: `api`
+   - Api location: *(leave blank — the API is deployed separately, see above)*
    - Output location: `dist`
    - Azure will auto-generate its own GitHub Actions workflow and an
      `AZURE_STATIC_WEB_APPS_API_TOKEN` repo secret. If this leaves two workflow files
-     in `.github/workflows/`, keep whichever one Azure generated (it already has the
-     right token wired in) and delete the other.
-3. **Set the real Azure OpenAI values in the Static Web App**: resource → under
-   **Settings**, click **Environment variables** → add:
-   - `AZURE_OPENAI_ENDPOINT`
-   - `AZURE_OPENAI_API_KEY`
-   - `AZURE_OPENAI_CHAT_DEPLOYMENT`
-   - `AZURE_OPENAI_EMBEDDING_DEPLOYMENT`
-4. Push to `main` — GitHub Actions builds and deploys automatically. Your app is live at
-   `https://<name>.azurestaticapps.net`, and signing in is required immediately —
-   nothing further to configure for auth itself.
-5. Optional: Static Web App → **Custom domains** → add your own domain.
+     for the frontend in `.github/workflows/`, keep whichever one Azure generated and
+     delete the other — just make sure its `api_location` is empty.
+3. Push to `main` — GitHub Actions builds and deploys automatically. Your app is live at
+   `https://<name>.azurestaticapps.net`, and signing in is required immediately.
+4. Optional: Static Web App → **Custom domains** → add your own domain.
 
 ## File format notes
 
@@ -180,6 +223,8 @@ api/
                                rejects non-@gatech.edu accounts (403)
   embeddings/index.js       – same, for embeddings
   host.json, package.json   – Azure Functions app config
+  (deployed as a standalone Function App — see "Deploying the API" — not as Static
+  Web Apps' managed Functions)
 src/
   App.jsx                   – top-level state machine (upload -> parse -> analyze -> ready)
   App.css                   – GT-themed styling
@@ -194,6 +239,8 @@ src/
     chunk.js                – splits a parsed document into retrieval chunks
     retrieve.js             – cosine-similarity search over chunk embeddings
     openai.js                – calls to our own /api/chat and /api/embeddings proxies
-staticwebapp.config.json    – SPA routing, auth requirements, and rolesSource config
-.github/workflows/          – GitHub Actions CI/CD for Azure Static Web Apps
+staticwebapp.config.json    – SPA routing and auth requirements (built-in "authenticated" role)
+.github/workflows/
+  azure-static-web-apps.yml – builds/deploys the frontend to Static Web Apps
+  deploy-functions.yml      – builds/deploys api/ to the standalone Function App
 ```
