@@ -14,7 +14,7 @@ module.exports = async function (context, req) {
   if (!endpoint || !apiKey || !deployment) {
     context.res = {
       status: 500,
-      jsonBody: {
+      body: {
         error:
           "Server is missing Azure OpenAI configuration. Set AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_API_KEY, and AZURE_OPENAI_EMBEDDING_DEPLOYMENT in the Static Web App's Environment variables.",
       },
@@ -28,7 +28,7 @@ module.exports = async function (context, req) {
   if (!hasInput) {
     context.res = {
       status: 400,
-      jsonBody: { error: "Request body must include 'input' (a string or array of strings)." },
+      body: { error: "Request body must include 'input' (a string or array of strings)." },
     };
     return;
   }
@@ -37,7 +37,7 @@ module.exports = async function (context, req) {
   if (!userEmail.toLowerCase().endsWith("@gatech.edu")) {
     context.res = {
       status: 403,
-      jsonBody: { error: "This tool is restricted to Georgia Tech (@gatech.edu) accounts." },
+      body: { error: "This tool is restricted to Georgia Tech (@gatech.edu) accounts." },
     };
     return;
   }
@@ -60,7 +60,7 @@ module.exports = async function (context, req) {
     if (!response.ok) {
       context.res = {
         status: response.status,
-        jsonBody: { error: data?.error?.message || "Azure OpenAI embeddings request failed." },
+        body: { error: data?.error?.message || "Azure OpenAI embeddings request failed." },
       };
       return;
     }
@@ -68,12 +68,12 @@ module.exports = async function (context, req) {
     const ordered = [...data.data].sort((a, b) => a.index - b.index);
     context.res = {
       status: 200,
-      jsonBody: { embeddings: ordered.map((d) => d.embedding) },
+      body: { embeddings: ordered.map((d) => d.embedding) },
     };
   } catch (err) {
     context.res = {
       status: 500,
-      jsonBody: { error: err.message || "Unexpected server error while contacting Azure OpenAI." },
+      body: { error: err.message || "Unexpected server error while contacting Azure OpenAI." },
     };
   }
 };
