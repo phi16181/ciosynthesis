@@ -13,15 +13,18 @@ module.exports = async function (context, req) {
   const deployment = process.env.AZURE_OPENAI_CHAT_DEPLOYMENT;
 
   if (!endpoint || !apiKey || !deployment) {
-    context.res = {
-      status: 500,
-      body: {
-        error:
-          "Server is missing Azure OpenAI configuration. Set AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_API_KEY, and AZURE_OPENAI_CHAT_DEPLOYMENT in the Static Web App's Environment variables.",
-      },
-    };
-    return;
-  }
+      const missing = [];
+      if (!endpoint) missing.push("AZURE_OPENAI_ENDPOINT");
+      if (!apiKey) missing.push("AZURE_OPENAI_API_KEY");
+      if (!deployment) missing.push("AZURE_OPENAI_CHAT_DEPLOYMENT");
+      context.res = {
+        status: 500,
+        body: {
+          error: `Server is missing these Azure OpenAI settings: ${missing.join(", ")}. Set them in the Function App's Environment variables.`,
+        },
+      };
+      return;
+    }
 
   const { messages } = req.body || {};
 
