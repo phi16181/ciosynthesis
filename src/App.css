@@ -84,6 +84,31 @@
   box-shadow: 0 0 0 3px rgba(76, 175, 107, 0.2);
 }
 
+.header__right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.header__user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.78rem;
+  color: #cfe0ee;
+  white-space: nowrap;
+}
+
+.header__signout {
+  color: var(--gold);
+  text-decoration: underline;
+  font-size: 0.75rem;
+}
+
+.header__signout:hover {
+  color: #fff;
+}
+
 /* ---------- Main layout ---------- */
 
 .app__main {

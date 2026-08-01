@@ -5,8 +5,29 @@
   },
   "routes": [
     {
+      "route": "/unauthorized.html",
+      "allowedRoles": ["anonymous", "authenticated", "gatech"]
+    },
+    {
       "route": "/api/*",
-      "allowedRoles": ["anonymous"]
+      "allowedRoles": ["gatech"]
+    },
+    {
+      "route": "/*",
+      "allowedRoles": ["gatech"]
     }
-  ]
+  ],
+  "responseOverrides": {
+    "401": {
+      "statusCode": 302,
+      "redirect": "/.auth/login/aad?post_login_redirect_uri=.referrer"
+    },
+    "403": {
+      "statusCode": 403,
+      "rewrite": "/unauthorized.html"
+    }
+  },
+  "auth": {
+    "rolesSource": "/api/GetRoles"
+  }
 }

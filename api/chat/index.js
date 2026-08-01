@@ -17,7 +17,7 @@ module.exports = async function (context, req) {
       status: 500,
       jsonBody: {
         error:
-          "Server is missing Azure OpenAI configuration. Set AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_API_KEY, and AZURE_OPENAI_CHAT_DEPLOYMENT in the Static Web App's Configuration.",
+          "Server is missing Azure OpenAI configuration. Set AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_API_KEY, and AZURE_OPENAI_CHAT_DEPLOYMENT in the Static Web App's Environment variables.",
       },
     };
     return;
@@ -32,6 +32,10 @@ module.exports = async function (context, req) {
     };
     return;
   }
+
+  // Basic usage trail: who (per Static Web Apps auth) asked for what, visible
+  // in the Function's logs / Application Insights if connected.
+  context.log(`[chat] request from ${getUserEmail(req)}`);
 
   try {
     const url = `${endpoint.replace(/\/$/, "")}/openai/v1/chat/completions`;
@@ -69,3 +73,14 @@ module.exports = async function (context, req) {
     };
   }
 };
+
+function getUserEmail(req) {
+  try {
+    const header = req.headers["x-ms-client-principal"];
+    if (!header) return "unknown";
+    const decoded = JSON.parse(Buffer.from(header, "base64").toString("utf-8"));
+    return decoded.userDetails || "unknown";
+  } catch {
+    return "unknown";
+  }
+}
