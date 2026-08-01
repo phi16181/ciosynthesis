@@ -45,14 +45,14 @@ module.exports = async function (context, req) {
   context.log(`[embeddings] request from ${userEmail}`);
 
   try {
-    const url = `${endpoint.replace(/\/$/, "")}/openai/v1/embeddings`;
+    const url = `${endpoint.replace(/\/$/, "")}/openai/deployments/${encodeURIComponent(deployment)}/embeddings?api-version=2024-10-21`;
     const response = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "api-key": apiKey,
       },
-      body: JSON.stringify({ model: deployment, input }),
+      body: JSON.stringify({ input }),
     });
 
     const data = await response.json();
