@@ -54,7 +54,7 @@ module.exports = async function (context, req) {
   context.log(`[chat] request from ${userEmail}`);
 
   try {
-    const url = `${endpoint.replace(/\/$/, "")}/openai/v1/chat/completions`;
+    const url = `${endpoint.replace(/\/$/, "")}/openai/deployments/${encodeURIComponent(deployment)}/chat/completions?api-version=2024-10-21`;
     const response = await fetch(url, {
       method: "POST",
       headers: {
@@ -62,7 +62,6 @@ module.exports = async function (context, req) {
         "api-key": apiKey,
       },
       body: JSON.stringify({
-        model: deployment,
         temperature: 0.3,
         messages,
       }),
