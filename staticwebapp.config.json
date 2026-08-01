@@ -1,33 +1,22 @@
 {
   "navigationFallback": {
     "rewrite": "/index.html",
-    "exclude": ["/api/*","/.auth/*","/*.{png,svg,ico,css,js,map}"]
+    "exclude": ["/api/*", "/.auth/*", "/*.{png,svg,ico,css,js,map}"]
   },
   "routes": [
     {
-      "route": "/unauthorized.html",
-      "allowedRoles": ["anonymous", "authenticated", "gatech"]
-    },
-    {
       "route": "/api/*",
-      "allowedRoles": ["gatech"]
+      "allowedRoles": ["authenticated"]
     },
     {
       "route": "/*",
-      "allowedRoles": ["gatech"]
+      "allowedRoles": ["authenticated"]
     }
   ],
   "responseOverrides": {
     "401": {
       "statusCode": 302,
       "redirect": "/.auth/login/aad?post_login_redirect_uri=.referrer"
-    },
-    "403": {
-      "statusCode": 403,
-      "rewrite": "/unauthorized.html"
     }
-  },
-  "auth": {
-    "rolesSource": "/api/GetRoles"
   }
 }

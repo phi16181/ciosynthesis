@@ -33,7 +33,16 @@ module.exports = async function (context, req) {
     return;
   }
 
-  context.log(`[embeddings] request from ${getUserEmail(req)}`);
+  const userEmail = getUserEmail(req);
+  if (!userEmail.toLowerCase().endsWith("@gatech.edu")) {
+    context.res = {
+      status: 403,
+      jsonBody: { error: "This tool is restricted to Georgia Tech (@gatech.edu) accounts." },
+    };
+    return;
+  }
+
+  context.log(`[embeddings] request from ${userEmail}`);
 
   try {
     const url = `${endpoint.replace(/\/$/, "")}/openai/v1/embeddings`;

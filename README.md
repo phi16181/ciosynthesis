@@ -36,28 +36,39 @@ safe to deploy this app publicly.
 ## Authentication
 
 The whole app — every page and every `/api/*` call — requires signing in with a
-Microsoft account, enforced by `staticwebapp.config.json`. This is Azure Static Web
-Apps' built-in authentication, so there's no custom login form and no password storage
-of any kind on our side.
+Microsoft account, enforced by `staticwebapp.config.json` (Azure Static Web Apps' built-in
+authentication). There's no custom login form and no password storage of any kind on our
+side.
 
-By default, Static Web Apps' Microsoft login accepts *any* Microsoft account, not just
-Georgia Tech ones. To restrict it, `api/GetRoles/index.js` runs automatically right
-after someone signs in and only grants a custom `"gatech"` role if their account's
-email/UPN ends in `@gatech.edu`. `staticwebapp.config.json` then requires the `"gatech"`
-role on every route, so:
+`staticwebapp.config.json` itself only requires the platform's built-in `"authenticated"`
+role — deliberately not a custom role. An earlier version of this used a custom
+`"gatech"` role assigned via a `rolesSource` function, but that combination triggered a
+known Azure Static Web Apps issue where the built-in login route itself starts returning
+404 instead of redirecting to Microsoft. Sticking to the plain `"authenticated"` role
+avoids that entirely.
 
-- Someone with a `@gatech.edu` Microsoft account signs in and gets full access.
-- Someone with any other Microsoft account can still complete sign-in, but lacks the
-  `"gatech"` role and is redirected to a plain "not authorized" page
-  (`public/unauthorized.html`) with a sign-out link.
+The actual **"must be a Georgia Tech account"** restriction happens in two places instead:
 
-Each request into `/api/chat` and `/api/embeddings` also logs the signed-in user's email
-via `context.log(...)`, visible in the Function's logs (or Application Insights, if you
-connect it to the Static Web App) — a basic usage trail without needing a database.
+- **Client-side** (`App.jsx`): on load, the app calls the built-in `/.auth/me` endpoint,
+  checks whether the signed-in account's email ends in `@gatech.edu`, and shows a
+  plain "not authorized" screen with a sign-out link if it doesn't.
+- **Server-side** (`api/chat/index.js`, `api/embeddings/index.js`): each function
+  independently decodes the `x-ms-client-principal` header Static Web Apps attaches to
+  every authenticated request and rejects (403) anything that isn't `@gatech.edu` — so
+  the restriction holds even if someone bypasses the frontend and calls the API directly.
+
+Someone with any other Microsoft account can still complete sign-in (Static Web Apps'
+default provider allows any Microsoft account), but is blocked immediately afterward by
+both of the checks above.
+
+Each accepted request into `/api/chat` and `/api/embeddings` also logs the signed-in
+user's email via `context.log(...)`, visible in the Function's logs (or Application
+Insights, if you connect it to the Static Web App) — a basic usage trail without needing
+a database.
 
 **Note:** this doesn't require registering anything with Georgia Tech's IT/Entra tenant —
-the restriction happens in our own code after a normal Microsoft sign-in, not through a
-tenant-specific app registration. That keeps setup simple, though it does mean the
+the restriction is enforced in our own code after a normal Microsoft sign-in, not through
+a tenant-specific app registration. That keeps setup simple, though it does mean the
 sign-in screen itself doesn't visually say "Georgia Tech" — someone would only find out
 they're blocked after trying to log in with a non-GT account.
 
@@ -95,10 +106,10 @@ swa start dist --api-location api
 ```
 
 `swa start` prints a local URL (typically `http://localhost:4280`) that emulates the
-`/.auth/*` routes with a mock login screen — pick "Microsoft" or enter a fake identity
-with a `@gatech.edu` userDetails value to test the "gatech" role locally.
-`api/local.settings.json` is git-ignored, so your Azure OpenAI credentials never get
-committed.
+`/.auth/*` routes with a mock login screen — enter a fake identity with a `@gatech.edu`
+userDetails value to see the app; anything else should land on the "not authorized"
+screen. `api/local.settings.json` is git-ignored, so your Azure OpenAI credentials never
+get committed.
 
 ## Setting up Azure OpenAI (one-time, before first deploy)
 
@@ -165,12 +176,10 @@ CI/CD from GitHub.
 
 ```
 api/
-  chat/index.js             – Azure Function proxying chat completions to Azure OpenAI
-  embeddings/index.js       – Azure Function proxying embeddings to Azure OpenAI
-  GetRoles/index.js         – assigns the "gatech" role to @gatech.edu accounts at login
+  chat/index.js             – Azure Function proxying chat completions to Azure OpenAI,
+                               rejects non-@gatech.edu accounts (403)
+  embeddings/index.js       – same, for embeddings
   host.json, package.json   – Azure Functions app config
-public/
-  unauthorized.html         – shown to signed-in non-GT accounts
 src/
   App.jsx                   – top-level state machine (upload -> parse -> analyze -> ready)
   App.css                   – GT-themed styling

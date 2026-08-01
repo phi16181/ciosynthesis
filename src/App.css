@@ -638,3 +638,54 @@
   color: #9a9a90;
   cursor: not-allowed;
 }
+
+/* ---------- Unauthorized screen ---------- */
+
+.app--unauthorized {
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: var(--paper);
+}
+
+.unauthorized-card {
+  max-width: 440px;
+  background: var(--panel);
+  border-radius: 12px;
+  padding: 40px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  text-align: center;
+}
+
+.unauthorized-card__logo {
+  height: 40px;
+  margin-bottom: 24px;
+}
+
+.unauthorized-card h1 {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  margin: 0 0 12px;
+  color: var(--navy);
+}
+
+.unauthorized-card p {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--slate);
+  margin: 0 0 24px;
+}
+
+.unauthorized-card__button {
+  display: inline-block;
+  background: var(--gold);
+  color: var(--navy-deep);
+  font-weight: 600;
+  text-decoration: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+}
+
+.unauthorized-card__button:hover {
+  background: var(--gold-bright);
+}

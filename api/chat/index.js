@@ -33,9 +33,22 @@ module.exports = async function (context, req) {
     return;
   }
 
-  // Basic usage trail: who (per Static Web Apps auth) asked for what, visible
-  // in the Function's logs / Application Insights if connected.
-  context.log(`[chat] request from ${getUserEmail(req)}`);
+  // staticwebapp.config.json only requires the built-in "authenticated" role
+  // (any Microsoft account) — the @gatech.edu restriction is enforced here,
+  // matching the same check done client-side, so it can't be bypassed by
+  // calling this endpoint directly.
+  const userEmail = getUserEmail(req);
+  if (!userEmail.toLowerCase().endsWith("@gatech.edu")) {
+    context.res = {
+      status: 403,
+      jsonBody: { error: "This tool is restricted to Georgia Tech (@gatech.edu) accounts." },
+    };
+    return;
+  }
+
+  // Basic usage trail: who asked for what, visible in the Function's logs /
+  // Application Insights if connected.
+  context.log(`[chat] request from ${userEmail}`);
 
   try {
     const url = `${endpoint.replace(/\/$/, "")}/openai/v1/chat/completions`;
