@@ -30,10 +30,7 @@ export default function Header() {
               </a>
             </span>
           )}
-          <span className="header__badge">
-            <span className="header__badge-dot" />
-            gpt-4o-mini
-          </span>
+
         </div>
       </div>
     </header>
