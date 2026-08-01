@@ -1,7 +1,7 @@
 const STAGES = [
   { key: "upload", label: "upload" },
   { key: "parse", label: "parse document" },
-  { key: "analyze", label: "synthesize with gpt-4o-mini" },
+  { key: "analyze", label: "synthesize with model" },
   { key: "ready", label: "ready" },
 ];
 
