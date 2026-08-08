@@ -1,4 +1,4 @@
-# CIOSynthesis
+# CIOSynthesis azure
 
 An AI-assisted reader for Georgia Tech Course-Instructor Opinion Survey (CIOS) reports.
 Instructors upload their report, get an organized summary, and can ask follow-up
