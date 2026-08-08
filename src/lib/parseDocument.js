@@ -3,7 +3,6 @@ import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import mammoth from "mammoth";
-import { isCiosFormat, parseCiosCsv, formatCiosText } from "./parseCios";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
@@ -157,31 +156,6 @@ export async function parseDocument(file) {
         "No readable text could be extracted from this file. It may be a scanned/image-only document."
       );
     }
-
-    if (isCiosFormat(rows)) {
-      // GT's CIOS export is a "pivoted" layout: each question has its own
-      // response-scale labels on a separate row, reused for however many
-      // following questions share that scale. A single fixed header (the
-      // generic path below) can't represent that — it was causing later
-      // Likert-scale questions to be labeled with an earlier question's
-      // scale (e.g. hours-per-week buckets applied to a preparedness
-      // rating). This parses that structure directly instead.
-      const parsed = parseCiosCsv(rows);
-      let { text, truncated } = formatCiosText(parsed);
-      if (text.length > CSV_MAX_CHARS) {
-        // Only fall back to sampling comments if the full text is genuinely
-        // too large — the quantitative section is always small/fixed-size.
-        const totalComments = parsed.comments.length || 1;
-        const approxCharsPerComment = text.length / totalComments;
-        const maxCommentsPerPrompt = Math.max(
-          5,
-          Math.floor(CSV_MAX_CHARS / approxCharsPerComment / 5)
-        );
-        ({ text, truncated } = formatCiosText(parsed, { maxCommentsPerPrompt }));
-      }
-      return { text, truncated, fileName: file.name, fileType: kind, rows };
-    }
-
     const { text, truncated } = buildCsvText(rows, CSV_MAX_CHARS);
     // `rows` (untouched, full) is kept alongside the bounded summary text so
     // Q&A can build a retrieval index over every row later, regardless of

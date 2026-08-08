@@ -5,11 +5,8 @@
  * instead of needing the entire document to fit in context up front.
  */
 
-import { isCiosFormat, parseCiosCsv, buildCiosChunks } from "./parseCios";
-
 /** One chunk per CSV row, formatted as "column: value" pairs so each row is
- * meaningful on its own without needing the header alongside it. Used for
- * generic/flat CSVs — see buildCiosChunks for GT's pivoted CIOS export. */
+ * meaningful on its own without needing the header alongside it. */
 function chunkCsvRows(rows) {
   if (!rows || rows.length === 0) return [];
   const header = rows[0];
@@ -58,9 +55,6 @@ function chunkProse(text, { targetSize = 1000, overlap = 120 } = {}) {
  */
 export function buildChunks(doc) {
   if (doc.fileType === "csv") {
-    if (isCiosFormat(doc.rows)) {
-      return buildCiosChunks(parseCiosCsv(doc.rows));
-    }
     return chunkCsvRows(doc.rows);
   }
   return chunkProse(doc.fullText || doc.text);
